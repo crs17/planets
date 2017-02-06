@@ -1,14 +1,20 @@
 import numpy as np
 
 import planetary_positions
+from normalizers import Normalizer
+from normalizers import PositionNormalizer
 
 
 class PlanetData(object):
 
     def __init__(self):
-        self.positions = planetary_positions.generate()
+        self.raw_positions = planetary_positions.generate()
+
+        self.gen_normalizers()
+        self.apply_normalizers()
+
         self.index_current = 0
-        self.normalize()
+
         return
 
     def next_batch(self, batch_size):
@@ -19,30 +25,24 @@ class PlanetData(object):
 
         return
 
-    def normalize(self):
-        self.normalizers = {}
-        for planet in self.positions.planets():
-            self.normalizers[planet] = Normalizer(self.positions[planet])
+    def gen_normalizers(self):
+        self.normalizers = {
+            'days': Normalizer(self.raw_positions['days'])}
+        for planet in self.raw_positions.planets():
+            print PositionNormalizer(self.raw_positions[planet])
+            self.normalizers[planet] = PositionNormalizer(self.raw_positions[planet])
 
         return
 
+    def apply_normalizers(self):
 
-class Normalizer(object):
-    def __init__(self, positions):
-        print positions
-        self.ra_corrections = []
+        print self.normalizers
+        self.norm_positions = {
+            'days': self.normalizers['days'].apply(self.raw_positions['days'])
+        }
+        for planet in self.raw_positions.planets():
+            self.norm_positions[planet] = self.normalizers[planet].apply(
+                self.raw_positions[planet])
 
-        self.transform_ra(positions['ra'])
-
-        return
-
-    def transform_ra(self, ra):
-        delta_ra = ra[1:] - ra[:-1]
-
-        print delta_ra
-        print np.min(delta_ra)
-        print np.max(delta_ra)
-        jumps = delta_ra < - 1.5 * np.pi
-        print jumps
-        print np.sum(jumps)
+        print self.norm_positions
         return
